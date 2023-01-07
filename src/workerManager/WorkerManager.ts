@@ -9,8 +9,8 @@ type Job = {
 }
 
 export default class WorkerManager {
-  jobQueue: Queue<Job>;
-  workers: { [workerId: string]: {
+  private jobQueue: Queue<Job>;
+  private workersPool: { [workerId: string]: {
     worker: Worker,
     job: Job,
   }};
@@ -18,7 +18,7 @@ export default class WorkerManager {
 
   constructor() {
     this.jobQueue = new Queue();
-    this.workers = {};
+    this.workersPool = {};
   }
 
   queueJob(workerFn: WorkerFunction, callback: JobCallback) {
@@ -47,7 +47,7 @@ export default class WorkerManager {
     worker.addEventListener('message', (ev) => {
       if (ev.data === 'finished') {
         // worker is finished execution
-        delete this.workers[workerId];
+        delete this.workersPool[workerId];
         this.tryCreateWorkerFromQueue();
       } else {
         // message from worker for caller
@@ -60,7 +60,7 @@ export default class WorkerManager {
       job.callback(error, null);
     });
 
-    this.workers[workerId] = { worker, job };
+    this.workersPool[workerId] = { worker, job };
 
     return workerId;
   }
@@ -71,14 +71,14 @@ export default class WorkerManager {
     
     // job was not in queue, it is being processed by a worker, terminate worker
     
-    const workEntry = Object.entries(this.workers).find(([workerId, { job }]) => job.jobId === jobId);
+    const workEntry = Object.entries(this.workersPool).find(([workerId, { job }]) => job.jobId === jobId);
     if (!workEntry) return; // No worker found either
     workEntry[1].worker.terminate();
-    delete this.workers[workEntry[0]];
+    delete this.workersPool[workEntry[0]];
   }
 
   getNumActiveWorkers() {
-    return Object.keys(this.workers).length;
+    return Object.keys(this.workersPool).length;
   }
 
   private fn2workerURL(fn: Function) {
