@@ -1,8 +1,18 @@
-import React from 'react';
+import { useEffect, useState } from 'react';
 import logo from './logo.svg';
 import './App.css';
+import someComputation from './compute/someComputation';
+import { workerManager } from './workerManager';
 
 function App() {
+  const [num, setNum] = useState(-1);
+  useEffect(() => {
+    const jobId = someComputation(setNum);
+    return () => {
+      workerManager.terminateJob(jobId);
+    }
+  }, []);
+
   return (
     <div className="App">
       <header className="App-header">
@@ -18,6 +28,7 @@ function App() {
         >
           Learn React
         </a>
+        <div>Progress: {Math.round(num * 10000)/100}%</div>
       </header>
     </div>
   );
